@@ -25,7 +25,7 @@ Thread(target=run_web_server).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("🤖 Бот запущен через HD Flux Engine...")
+print("🤖 Бот запущен через стабильный HD-генератор...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -58,35 +58,36 @@ def handle_docs(message):
             clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
             encoded_text = urllib.parse.quote(clean_text)
             
-            # Подключаем мощный HD движок без водяных знаков
-            api_link = f"https://novelai.biz{encoded_text}"
+            # Стабильный мировой API Stable Diffusion 3 / Flux (Без водяных знаков)
+            api_link = f"https://pollinations.ai{encoded_text}"
             
             payload = {
                 'width': 1280,
                 'height': 720,
-                'model': 'flux-realism',
-                'negative': 'blurry, low quality, watermark, logo'
+                'seed': 555,
+                'model': 'flux',
+                'nologo': 'true'  # На этой модели этот параметр наконец-то сработает чисто
             }
             
             headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(api_link, params=payload, headers=headers, timeout=60)
             
-            if response.status_code == 200 and len(response.content) > 5000:
-                image_bytes = response.content
-                img = Image.open(io.BytesIO(image_bytes))
-                generated_images.append((f"image_{idx + 1}.png", img))
-            else:
-                # Если движок занят, делаем запасной быстрый запрос
-                fallback_url = f"https://embed. thoseflux.ai/generate?prompt={encoded_text}&width=1280&height=720"
-                res = requests.get(fallback_url, headers=headers, timeout=40)
-                if res.status_code == 200:
-                    img = Image.open(io.BytesIO(res.content))
+            try:
+                response = requests.get(api_link, params=payload, headers=headers, timeout=50)
+                
+                # Тройная защита: проверяем, что нам пришла именно картинка, а не текст ошибки
+                if response.status_code == 200 and len(response.content) > 5000 and b"html" not in response.content[:20]:
+                    image_bytes = response.content
+                    img = Image.open(io.BytesIO(image_bytes))
                     generated_images.append((f"image_{idx + 1}.png", img))
                 else:
+                    print(f"Сбой на строке {idx + 1}. Код ответа сервера: {response.status_code}")
                     continue
+            except Exception as req_err:
+                print(f"Ошибка запроса: {req_err}")
+                continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Сервер генерации занят. Попробуй отправить файл еще раз через минуту.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Возможно, текст промпта слишком сложный или сервер временно перегружен. Попробуйте еще раз через 30 секунд.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все HD-картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -100,7 +101,7 @@ def handle_docs(message):
                 
         zip_buffer.seek(0)
         
-        bot.send_document(message.chat.id, io.BytesIO(zip_buffer.read()), visible_file_name="premium_images_pack.zip")
+        bot.send_document(message.chat.id, io.BytesIO(zip_buffer.read()), visible_file_name="clear_hd_images_pack.zip")
         bot.delete_message(message.chat.id, status_msg.message_id)
         
     except Exception as e:
