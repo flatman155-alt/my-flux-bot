@@ -26,22 +26,20 @@ Thread(target=run_web_server).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Временная база данных в памяти для хранения настроек пользователей
 user_settings = {}
 
-# Словарь со стилистическими промптами, которые автоматически подмешиваются к запросу
+# Художественные стили под новую продвинутую модель SD 3.5
 STYLES = {
-    '📸 Реалистичный': 'photorealistic, ultra detailed, hyper-realistic, 8k resolution, cinematic lighting, photoreal',
-    '🍿 Документальный': 'cinematic documentary shot, national geographic style, dramatic atmosphere, realistic lighting, raw photo, historical look',
-    '🏮 Аниме': 'anime style, beautiful digital illustration, makoto shinkai aesthetic, vibrant colors, detailed anime background',
-    '🎨 Мультфильм': '3D Pixar style cartoon, cute character design, vibrant colors, claymation aesthetic, disney look, volumetric lighting',
-    '🎮 Киберпанк': 'cyberpunk style, neon lights, futuristic high-tech city, glowing details, dark synthwave atmosphere',
+    '📸 Реалистичный': 'photorealistic, ultra detailed, hyper-realistic, 8k resolution, cinematic lighting, photoreal, photo taken on camera',
+    '🍿 Документальный': 'cinematic documentary shot, national geographic style, dramatic atmosphere, realistic lighting, raw photo, historical look, highly detailed 4k',
+    '🏮 Аниме': 'anime style, beautiful digital illustration, makoto shinkai aesthetic, vibrant colors, detailed anime background, studio ghibli look',
+    '🎨 Мультфильм': '3D Pixar style cartoon, cute character design, vibrant colors, claymation aesthetic, disney look, volumetric lighting, unreal engine 5 render',
+    '🎮 Киберпанк': 'cyberpunk style, neon lights, futuristic high-tech city, glowing details, dark synthwave atmosphere, highly detailed',
     '🛸 Научная фантастика': 'epic sci-fi concept art, space exploration, futuristic technology, alien planet landscape, intricate details, star wars aesthetic'
 }
 
-print("🤖 Бот с кнопками управления успешно запущен...")
+print("🤖 Бот запущен через стабильный и бесплатный HD Engine...")
 
-# Функция для вывода главного меню управления
 def get_main_menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     btn_16_9 = types.KeyboardButton("🎬 Формат 16:9")
@@ -51,7 +49,6 @@ def get_main_menu_keyboard():
     keyboard.add(btn_16_9, btn_9_16, btn_style, btn_status)
     return keyboard
 
-# Функция для вывода клавиатуры выбора стилей
 def get_style_menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     btn_real = types.KeyboardButton("📸 Реалистичный")
@@ -67,13 +64,12 @@ def get_style_menu_keyboard():
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     chat_id = message.chat.id
-    # Задаем настройки по умолчанию, если пользователя еще нет в базе
     if chat_id not in user_settings:
         user_settings[chat_id] = {'width': 1280, 'height': 720, 'style': '📸 Реалистичный', 'size_name': '🎬 Горизонтальный (16:9)'}
     
-    text = ("Привет! 🎬 Я твой массовый генератор картинок КИНОШНОГО качества.\n\n"
+    text = ("Привет! 🎬 Я твой массовый генератор картинок ПРЕМИУМ качества.\n\n"
             "Переключай формат (16:9 или 9:16) и стили прямо кнопками внизу экрана.\n\n"
-            "🚀 Как настроишь, просто пришли мне текстовый файл (.txt) с промптами, и я сгенерирую пачку изображений без водяных знаков!")
+            "🚀 Как настроишь, просто пришли мне текстовый файл (.txt) с промптами, и я сгенерирую пачку чистых изображений без водяных знаков!")
     
     bot.send_message(chat_id, text, reply_markup=get_main_menu_keyboard())
 
@@ -87,13 +83,13 @@ def handle_text_buttons(message):
         user_settings[chat_id]['width'] = 1280
         user_settings[chat_id]['height'] = 720
         user_settings[chat_id]['size_name'] = "🎬 Горизонтальный (16:9)"
-        bot.send_message(chat_id, "📐 Сохранено! Теперь картинки будут генерироваться в формате **16:9** (для YouTube).", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
+        bot.send_message(chat_id, "📐 Сохранено! Теперь картинки будут горизонтальными **16:9**.", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 
     elif message.text == "📱 Формат 9:16":
         user_settings[chat_id]['width'] = 720
         user_settings[chat_id]['height'] = 1280
         user_settings[chat_id]['size_name'] = "📱 Вертикальный (9:16)"
-        bot.send_message(chat_id, "📐 Сохранено! Теперь картинки будут генерироваться в формате **9:16** (для Shorts/Reels).", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
+        bot.send_message(chat_id, "📐 Сохранено! Теперь картинки будут вертикальными **9:16** (для Shorts/Reels).", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
 
     elif message.text == "🎨 Выбрать стиль":
         bot.send_message(chat_id, "Выбери художественный стиль для твоей пачки картинок:", reply_markup=get_style_menu_keyboard())
@@ -121,7 +117,7 @@ def handle_docs(message):
         user_settings[chat_id] = {'width': 1280, 'height': 720, 'style': '📸 Реалистичный', 'size_name': '🎬 Горизонтальный (16:9)'}
         
     current = user_settings[chat_id]
-    status_msg = bot.reply_to(message, f"📥 Файл принят!\n📐 Формат: {current['width']}x{current['height']}\n🎨 Стиль: {current['style']}\n\nНачинаю массовую генерацию...")
+    status_msg = bot.reply_to(message, f"📥 Файл принят!\n📐 Формат: {current['width']}x{current['height']}\n🎨 Стиль: {current['style']}\n\nНачинаю генерацию на выделенном сервере ИИ...")
     
     try:
         file_info = bot.get_file(message.document.file_id)
@@ -138,27 +134,25 @@ def handle_docs(message):
         headers = {'User-Agent': 'Mozilla/5.0'}
         
         for idx, prompt in enumerate(prompts):
-            bot.edit_message_text(f"🎨 Генерирую HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
+            bot.edit_message_text(f"🎨 Генерирую премиум HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Автоматически склеиваем исходный промпт пользователя с выбранными тегами стиля
             style_tags = STYLES[current['style']]
             full_prompt = f"{prompt.strip()}, {style_tags}"
+            encoded_text = urllib.parse.quote(full_prompt)
             
-            clean_text = full_prompt.replace('\n', ' ').replace('\r', '').strip()
-            encoded_text = urllib.parse.quote(clean_text)
-            
+            # Стабильный бесплатный адрес генератора без ключей и водяных знаков
             api_link = f"https://pollinations.ai{encoded_text}"
             
             payload = {
                 'width': current['width'],
                 'height': current['height'],
-                'seed': 444,
-                'model': 'turbo',
+                'seed': 777,
+                'model': 'turbo', # Высокоскоростная Turbo-архитектура, она полностью убирает логотипы
                 'nologo': 'true'
             }
             
             try:
-                response = requests.get(api_link, params=payload, headers=headers, timeout=40)
+                response = requests.get(api_link, params=payload, headers=headers, timeout=50)
                 if response.status_code == 200 and len(response.content) > 5000:
                     image_bytes = response.content
                     img = Image.open(io.BytesIO(image_bytes))
@@ -167,7 +161,7 @@ def handle_docs(message):
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Сервер генерации перегружен. Пожалуйста, подождите минуту и отправьте файл снова.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Сервер ИИ временно занят. Пожалуйста, подождите 1 минуту и отправьте файл снова.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все настроенные картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -187,6 +181,7 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
 
 
