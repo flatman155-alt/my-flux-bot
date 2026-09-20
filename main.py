@@ -3,7 +3,6 @@ import zipfile
 import telebot
 import requests
 import io
-import urllib.parse
 from PIL import Image
 from threading import Thread
 from flask import Flask
@@ -43,8 +42,9 @@ def handle_docs(message):
         file_info = bot.get_file(message.document.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
-        prompts = downloaded_file.decode('utf-8').splitlines()
-        prompts = [p.strip() for p in prompts if p.strip()]
+        # Декодируем и очищаем каждую строчку от скрытых символов переноса (\r, \n)
+        lines = downloaded_file.decode('utf-8').splitlines()
+        prompts = [p.strip() for p in lines if p.strip()]
         
         if not prompts:
             bot.edit_message_text("❌ Файл пустой! Напиши промпты внутри файла.", message.chat.id, status_msg.message_id)
@@ -55,28 +55,31 @@ def handle_docs(message):
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Очищаем промпт от возможных кривых символов и кодируем для ссылки
-            clean_prompt = prompt.replace('\n', ' ').replace('\r', '').strip()
-            encoded_prompt = urllib.parse.quote(clean_prompt)
+            # Железно чистый базовый адрес API
+            base_url = f"https://pollinations.ai{prompt}"
             
-                       # Точный и проверенный адрес API без склеивания
-            image_url = f"https://pollinations.ai{encoded_prompt}?width=1280&height=720&seed=42"
-
+            # Передаем параметры отдельно, чтобы библиотека сама правильно собрала ссылку
+            params = {
+                'width': 1280,
+                'height': 720,
+                'seed': 42,
+                'model': 'flux'
+            }
             
-            # Добавляем заголовки, чтобы прикинуться обычным браузером
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-            response = requests.get(image_url, headers=headers, timeout=40)
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(base_url, params=params, headers=headers, timeout=40)
             
-            if response.status_code == 200 and b"PNG" in response.content[:10] or b"JFIF" in response.content[:10] or b"Exif" in response.content[:10]:
+            # Проверяем, что нам пришла именно картинка, а не ошибка текста
+            if response.status_code == 200 and len(response.content) > 1000:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Ошибка или неверный формат на промпте '{prompt}'")
+                print(f"Ошибка на промпте '{prompt}': код {response.status_code}")
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Не удалось сгенерировать ни одной картинки. Попробуй изменить текст промптов в файле.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Попробуй изменить текст в файле.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
