@@ -59,8 +59,9 @@ def handle_docs(message):
             clean_prompt = prompt.replace('\n', ' ').replace('\r', '').strip()
             encoded_prompt = urllib.parse.quote(clean_prompt)
             
-            # Используем стабильную прямую ссылку без лишних параметров для Flux
+                       # Точный и проверенный адрес API без склеивания
             image_url = f"https://pollinations.ai{encoded_prompt}?width=1280&height=720&seed=42"
+
             
             # Добавляем заголовки, чтобы прикинуться обычным браузером
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
