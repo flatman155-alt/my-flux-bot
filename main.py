@@ -42,7 +42,6 @@ def handle_docs(message):
         file_info = bot.get_file(message.document.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
-        # Декодируем и очищаем каждую строчку от скрытых символов переноса (\r, \n)
         lines = downloaded_file.decode('utf-8').splitlines()
         prompts = [p.strip() for p in lines if p.strip()]
         
@@ -55,10 +54,9 @@ def handle_docs(message):
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Железно чистый базовый адрес API
+            # Железно чистый базовый адрес API без склеек в строке
             base_url = f"https://pollinations.ai{prompt}"
             
-            # Передаем параметры отдельно, чтобы библиотека сама правильно собрала ссылку
             params = {
                 'width': 1280,
                 'height': 720,
@@ -69,7 +67,6 @@ def handle_docs(message):
             headers = {'User-Agent': 'Mozilla/5.0'}
             response = requests.get(base_url, params=params, headers=headers, timeout=40)
             
-            # Проверяем, что нам пришла именно картинка, а не ошибка текста
             if response.status_code == 200 and len(response.content) > 1000:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
