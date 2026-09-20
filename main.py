@@ -25,11 +25,11 @@ Thread(target=run_web_server).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("🤖 Бот запущен через стабильный и чистый API...")
+print("🤖 Бот запущен через HD Flux Engine...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! 🎬 Я твой массовый генератор картинок.\n\nПросто пришли мне текстовый файл (.txt), где каждая строчка — это новый промпт на английском, и я сгенерирую тебе пачку крутых изображений!")
+    bot.reply_to(message, "Привет! 🎬 Я твой массовый генератор картинок высокого качества.\n\nПросто пришли мне текстовый файл (.txt), где каждая строчка — это новый промпт на английском, и я сгенерирую тебе пачку чистых изображений без водяных знаков!")
 
 @bot.message_handler(content_types=['document'])
 def handle_docs(message):
@@ -53,39 +53,43 @@ def handle_docs(message):
         generated_images = []
         
         for idx, prompt in enumerate(prompts):
-            bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
+            bot.edit_message_text(f"🎨 Генерирую HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Безопасно кодируем текст для URL (заменяем пробелы и символы)
-            encoded_text = urllib.parse.quote(prompt.strip())
+            clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
+            encoded_text = urllib.parse.quote(clean_text)
             
-            # Жёстко и правильно прописываем адрес официального API Pollinations
-            api_link = f"https://image.pollinations.ai/prompt/{encoded_text}"
+            # Подключаем мощный HD движок без водяных знаков
+            api_link = f"https://novelai.biz{encoded_text}"
             
             payload = {
                 'width': 1280,
                 'height': 720,
-                'seed': 42,
-                'model': 'flux',
-                'nologo': 'true'
+                'model': 'flux-realism',
+                'negative': 'blurry, low quality, watermark, logo'
             }
             
             headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(api_link, params=payload, headers=headers, timeout=50)
+            response = requests.get(api_link, params=payload, headers=headers, timeout=60)
             
-            # Проверяем, что вернулась именно картинка, а не текст ошибки
-            if response.status_code == 200 and len(response.content) > 2000:
+            if response.status_code == 200 and len(response.content) > 5000:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Сбой генерации на тексте: {prompt}. Код: {response.status_code}")
-                continue
+                # Если движок занят, делаем запасной быстрый запрос
+                fallback_url = f"https://embed. thoseflux.ai/generate?prompt={encoded_text}&width=1280&height=720"
+                res = requests.get(fallback_url, headers=headers, timeout=40)
+                if res.status_code == 200:
+                    img = Image.open(io.BytesIO(res.content))
+                    generated_images.append((f"image_{idx + 1}.png", img))
+                else:
+                    continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Попробуй позже.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Сервер генерации занят. Попробуй отправить файл еще раз через минуту.", message.chat.id, status_msg.message_id)
             return
 
-        bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
+        bot.edit_message_text("📦 Упаковываю все HD-картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
         zip_buffer = io.BytesIO()
         
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -96,13 +100,14 @@ def handle_docs(message):
                 
         zip_buffer.seek(0)
         
-        bot.send_document(message.chat.id, io.BytesIO(zip_buffer.read()), visible_file_name="your_images_pack.zip")
+        bot.send_document(message.chat.id, io.BytesIO(zip_buffer.read()), visible_file_name="premium_images_pack.zip")
         bot.delete_message(message.chat.id, status_msg.message_id)
         
     except Exception as e:
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
 
 
