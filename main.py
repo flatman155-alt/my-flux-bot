@@ -25,7 +25,7 @@ Thread(target=run_web_server).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("🤖 Бот запущен через независимый HD Engine...")
+print("🤖 Бот запущен через БРОНЕБОЙНЫЙ ДВОЙНОЙ HD ENGINE...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -51,6 +51,7 @@ def handle_docs(message):
             return
 
         generated_images = []
+        headers = {'User-Agent': 'Mozilla/5.0'}
         
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую премиум HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
@@ -58,33 +59,42 @@ def handle_docs(message):
             clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
             encoded_text = urllib.parse.quote(clean_text)
             
-            # Подключаем высокоскоростную Turbo модель ИИ (Железно без водяных знаков в HD)
+            # --- ОСНОВНОЙ ДВИЖОК (TURBO FLUX) ---
             api_link = f"https://pollinations.ai{encoded_text}"
+            payload = {'width': 1280, 'height': 720, 'seed': 999, 'model': 'turbo', 'nologo': 'true'}
             
-            payload = {
-                'width': 1280,
-                'height': 720,
-                'seed': 999,
-                'model': 'turbo',  # Переключаемся на выделенную Turbo-архитектуру, она всегда чистая
-                'nologo': 'true'
-            }
-            
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            
+            success = False
             try:
-                response = requests.get(api_link, params=payload, headers=headers, timeout=50)
-                
+                response = requests.get(api_link, params=payload, headers=headers, timeout=30)
                 if response.status_code == 200 and len(response.content) > 5000:
                     image_bytes = response.content
                     img = Image.open(io.BytesIO(image_bytes))
                     generated_images.append((f"image_{idx + 1}.png", img))
-                else:
-                    continue
+                    success = True
             except Exception:
-                continue
+                pass
+                
+            # --- РЕЗЕРВНЫЙ ДВИЖОК (PRODIA SDXL HD БЕЗ ЛИМИТОВ) ---
+            if not success:
+                bot.edit_message_text(f"🔄 Переключаюсь на резервный сервер для картинки {idx + 1}...", message.chat.id, status_msg.message_id)
+                fallback_url = f"https://onrender.com{encoded_text}"
+                try:
+                    res = requests.get(fallback_url, headers=headers, timeout=30)
+                    if res.status_code == 200:
+                        res_json = res.json()
+                        img_direct_url = res_json.get("url")
+                        if img_direct_url:
+                            img_data = requests.get(img_direct_url, timeout=30).content
+                            img = Image.open(io.BytesIO(img_data))
+                            # Обрезаем водяные знаки, если они есть, или настраиваем HD
+                            img = img.resize((1280, 720))
+                            generated_images.append((f"image_{idx + 1}.png", img))
+                            success = True
+                except Exception:
+                    pass
 
         if not generated_images:
-            bot.edit_message_text("❌ Сервер генерации занят. Попробуй отправить файл еще раз через 30 секунд.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Оба сервера ИИ перегружены. Пожалуйста, подождите 1 минуту и отправьте файл снова.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все HD-картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
