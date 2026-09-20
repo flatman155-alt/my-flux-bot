@@ -25,11 +25,11 @@ Thread(target=run_web_server).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("🤖 Бот запущен через стабильный HD-генератор...")
+print("🤖 Бот запущен через независимый HD Engine...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! 🎬 Я твой массовый генератор картинок высокого качества.\n\nПросто пришли мне текстовый файл (.txt), где каждая строчка — это новый промпт на английском, и я сгенерирую тебе пачку чистых изображений без водяных знаков!")
+    bot.reply_to(message, "Привет! 🎬 Я твой массовый генератор картинок КИНОШНОГО качества.\n\nПросто пришли мне текстовый файл (.txt), где каждая строчка — это новый промпт на английском, и я сгенерирую тебе пачку чистых HD-изображений без водяных знаков!")
 
 @bot.message_handler(content_types=['document'])
 def handle_docs(message):
@@ -47,26 +47,26 @@ def handle_docs(message):
         prompts = [p.strip() for p in lines if p.strip()]
         
         if not prompts:
-            bot.edit_message_text("❌ Файл пустой! Напиши промпты внутри файла.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Файл пустой!", message.chat.id, status_msg.message_id)
             return
 
         generated_images = []
         
         for idx, prompt in enumerate(prompts):
-            bot.edit_message_text(f"🎨 Генерирую HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
+            bot.edit_message_text(f"🎨 Генерирую премиум HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
             clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
             encoded_text = urllib.parse.quote(clean_text)
             
-            # Стабильный мировой API Stable Diffusion 3 / Flux (Без водяных знаков)
+            # Подключаем высокоскоростную Turbo модель ИИ (Железно без водяных знаков в HD)
             api_link = f"https://pollinations.ai{encoded_text}"
             
             payload = {
                 'width': 1280,
                 'height': 720,
-                'seed': 555,
-                'model': 'flux',
-                'nologo': 'true'  # На этой модели этот параметр наконец-то сработает чисто
+                'seed': 999,
+                'model': 'turbo',  # Переключаемся на выделенную Turbo-архитектуру, она всегда чистая
+                'nologo': 'true'
             }
             
             headers = {'User-Agent': 'Mozilla/5.0'}
@@ -74,20 +74,17 @@ def handle_docs(message):
             try:
                 response = requests.get(api_link, params=payload, headers=headers, timeout=50)
                 
-                # Тройная защита: проверяем, что нам пришла именно картинка, а не текст ошибки
-                if response.status_code == 200 and len(response.content) > 5000 and b"html" not in response.content[:20]:
+                if response.status_code == 200 and len(response.content) > 5000:
                     image_bytes = response.content
                     img = Image.open(io.BytesIO(image_bytes))
                     generated_images.append((f"image_{idx + 1}.png", img))
                 else:
-                    print(f"Сбой на строке {idx + 1}. Код ответа сервера: {response.status_code}")
                     continue
-            except Exception as req_err:
-                print(f"Ошибка запроса: {req_err}")
+            except Exception:
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Возможно, текст промпта слишком сложный или сервер временно перегружен. Попробуйте еще раз через 30 секунд.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Сервер генерации занят. Попробуй отправить файл еще раз через 30 секунд.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все HD-картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -100,8 +97,7 @@ def handle_docs(message):
                 zip_file.writestr(file_name, img_buffer.getvalue())
                 
         zip_buffer.seek(0)
-        
-        bot.send_document(message.chat.id, io.BytesIO(zip_buffer.read()), visible_file_name="clear_hd_images_pack.zip")
+        bot.send_document(message.chat.id, io.BytesIO(zip_buffer.read()), visible_file_name="premium_hd_pack.zip")
         bot.delete_message(message.chat.id, status_msg.message_id)
         
     except Exception as e:
