@@ -55,14 +55,12 @@ def handle_docs(message):
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Очищаем промпт и кодируем его для безопасной вставки в URL (заменяем пробелы на %20)
-            clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
-            encoded_text = urllib.parse.quote(clean_text)
+            # Безопасно кодируем текст для URL (заменяем пробелы и символы)
+            encoded_text = urllib.parse.quote(prompt.strip())
             
-            # Двойной контроль слэша: адрес сайта ВСЕГДА жестко отделен от текста картинки
-            api_link = f"https://pollinations.ai{encoded_text}"
+            # Жёстко и правильно прописываем адрес официального API Pollinations
+            api_link = f"https://image.pollinations.ai/prompt/{encoded_text}"
             
-            # Дополнительные настройки картинки передаем отдельно
             payload = {
                 'width': 1280,
                 'height': 720,
@@ -74,17 +72,17 @@ def handle_docs(message):
             headers = {'User-Agent': 'Mozilla/5.0'}
             response = requests.get(api_link, params=payload, headers=headers, timeout=50)
             
-            # Проверяем, что сервер вернул именно картинку (больше 2000 байт), а не ошибку текстом
+            # Проверяем, что вернулась именно картинка, а не текст ошибки
             if response.status_code == 200 and len(response.content) > 2000:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Сбой генерации на тексте: {clean_text}. Код: {response.status_code}")
+                print(f"Сбой генерации на тексте: {prompt}. Код: {response.status_code}")
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Сервер ИИ временно перегружен запросами. Попробуй отправить файл еще раз через 30 секунд.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Попробуй позже.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -105,7 +103,6 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
-
 
 
 
