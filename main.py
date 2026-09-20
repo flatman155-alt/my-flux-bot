@@ -24,7 +24,7 @@ Thread(target=run_web_server).start()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("🤖 Бот запущен через стабильный Pollinations API...")
+print("🤖 Бот запущен через стабильный и чистый API...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -54,29 +54,33 @@ def handle_docs(message):
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Железно чистый базовый адрес API без склеек в строке
-            base_url = f"https://pollinations.ai{prompt}"
+            # АБСОЛЮТНО ДРУГОЙ, БЕЗОПАСНЫЙ АДРЕС ИИ (БЕЗ СКЛЕИВАНИЯ СТРОК)
+            # Текст промпта передается строго внутрь параметров запроса 'prompt': prompt
+            api_link = "https://pollinations.ai"
+            clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
             
-            params = {
+            payload = {
+                'prompt': clean_text,
                 'width': 1280,
                 'height': 720,
                 'seed': 42,
-                'model': 'flux'
+                'model': 'flux',
+                'nologo': 'true'
             }
             
             headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(base_url, params=params, headers=headers, timeout=40)
+            response = requests.get(api_link, params=payload, headers=headers, timeout=50)
             
-            if response.status_code == 200 and len(response.content) > 1000:
+            if response.status_code == 200 and len(response.content) > 2000:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Ошибка на промпте '{prompt}': код {response.status_code}")
+                print(f"Сбой генерации на тексте: {clean_text}. Статус: {response.status_code}")
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Попробуй изменить текст в файле.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Очередь ИИ перегружена или промпты не распознаны. Попробуйте еще раз через минуту.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -97,6 +101,7 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
 
 
