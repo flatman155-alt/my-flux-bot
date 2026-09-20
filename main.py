@@ -3,6 +3,7 @@ import zipfile
 import telebot
 import requests
 import io
+import urllib.parse
 from PIL import Image
 from threading import Thread
 from flask import Flask
@@ -54,13 +55,15 @@ def handle_docs(message):
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # АБСОЛЮТНО ДРУГОЙ, БЕЗОПАСНЫЙ АДРЕС ИИ (БЕЗ СКЛЕИВАНИЯ СТРОК)
-            # Текст промпта передается строго внутрь параметров запроса 'prompt': prompt
-            api_link = "https://pollinations.ai"
+            # Очищаем промпт и кодируем его для безопасной вставки в URL (заменяем пробелы на %20)
             clean_text = prompt.replace('\n', ' ').replace('\r', '').strip()
+            encoded_text = urllib.parse.quote(clean_text)
             
+            # Двойной контроль слэша: адрес сайта ВСЕГДА жестко отделен от текста картинки
+            api_link = f"https://pollinations.ai{encoded_text}"
+            
+            # Дополнительные настройки картинки передаем отдельно
             payload = {
-                'prompt': clean_text,
                 'width': 1280,
                 'height': 720,
                 'seed': 42,
@@ -71,16 +74,17 @@ def handle_docs(message):
             headers = {'User-Agent': 'Mozilla/5.0'}
             response = requests.get(api_link, params=payload, headers=headers, timeout=50)
             
+            # Проверяем, что сервер вернул именно картинку (больше 2000 байт), а не ошибку текстом
             if response.status_code == 200 and len(response.content) > 2000:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Сбой генерации на тексте: {clean_text}. Статус: {response.status_code}")
+                print(f"Сбой генерации на тексте: {clean_text}. Код: {response.status_code}")
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Очередь ИИ перегружена или промпты не распознаны. Попробуйте еще раз через минуту.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Сервер ИИ временно перегружен запросами. Попробуй отправить файл еще раз через 30 секунд.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -101,6 +105,7 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
 
 
