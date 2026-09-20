@@ -22,11 +22,10 @@ def run_web_server():
 Thread(target=run_web_server).start()
 # --------------------------------------------------
 
-# Забираем токен Телеграм из скрытых настроек сервера
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-print("🤖 Бот 'Массовый Генератор Картинок' успешно запущен в облаке через Pollinations...")
+print("🤖 Бот запущен через стабильный Pollinations API...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -56,28 +55,30 @@ def handle_docs(message):
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            # Кодируем текст промпта для безопасной передачи в ссылке
-            encoded_prompt = urllib.parse.quote(prompt)
+            # Очищаем промпт от возможных кривых символов и кодируем для ссылки
+            clean_prompt = prompt.replace('\n', ' ').replace('\r', '').strip()
+            encoded_prompt = urllib.parse.quote(clean_prompt)
             
-            # Генерируем картинку через бесплатный и быстрый Flux от Pollinations.ai
-            # Добавляем параметры для лучшего качества и стиля обложки YouTube
-            image_url = f"https://pollinations.ai{encoded_prompt}?width=1280&height=720&model=flux&enhance=true"
+            # Используем стабильную прямую ссылку без лишних параметров для Flux
+            image_url = f"https://pollinations.ai{encoded_prompt}?width=1280&height=720&seed=42"
             
-            response = requests.get(image_url, timeout=40)
+            # Добавляем заголовки, чтобы прикинуться обычным браузером
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            response = requests.get(image_url, headers=headers, timeout=40)
             
-            if response.status_code == 200:
+            if response.status_code == 200 and b"PNG" in response.content[:10] or b"JFIF" in response.content[:10] or b"Exif" in response.content[:10]:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Ошибка на промпте '{prompt}': {response.status_code}")
+                print(f"Ошибка или неверный формат на промпте '{prompt}'")
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Не удалось сгенерировать картинки. Попробуй позже.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Не удалось сгенерировать ни одной картинки. Попробуй изменить текст промптов в файле.", message.chat.id, status_msg.message_id)
             return
 
-        bot.edit_message_text("📦 Упаковываю все картинки in ZIP-архив...", message.chat.id, status_msg.message_id)
+        bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
         zip_buffer = io.BytesIO()
         
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -95,5 +96,6 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
 
