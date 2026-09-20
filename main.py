@@ -3,6 +3,7 @@ import zipfile
 import telebot
 import requests
 import io
+import urllib.parse
 from PIL import Image
 from threading import Thread
 from flask import Flask
@@ -15,28 +16,21 @@ def home():
     return "🤖 Бот успешно запущен и работает в облаке!"
 
 def run_web_server():
-    # Render автоматически передает номер порта в переменную PORT
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# Запускаем веб-сервер в отдельном потоке, чтобы он не мешал боту
 Thread(target=run_web_server).start()
 # --------------------------------------------------
 
-# Безопасно забираем токены из скрытых настроек сервера
+# Забираем токен Телеграм из скрытых настроек сервера
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-HF_TOKEN = os.environ.get("HF_TOKEN")
-
 bot = telebot.TeleBot(BOT_TOKEN)
 
-API_URL = "https://huggingface.co"
-headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-
-print("🤖 Бот 'Массовый Генератор Картинок' успешно запущен в облаке...")
+print("🤖 Бот 'Массовый Генератор Картинок' успешно запущен в облаке через Pollinations...")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! 🎬 Я твой массовый генератор картинок.\n\nПросто пришли мне текстовый файл (.txt), где каждая строчка — это новый промпт, и я сгенерирую тебе пачку крутых изображений!")
+    bot.reply_to(message, "Привет! 🎬 Я твой массовый генератор картинок.\n\nПросто пришли мне текстовый файл (.txt), где каждая строчка — это новый промпт на английском, и я сгенерирую тебе пачку крутых изображений!")
 
 @bot.message_handler(content_types=['document'])
 def handle_docs(message):
@@ -58,26 +52,32 @@ def handle_docs(message):
             return
 
         generated_images = []
-        session = requests.Session()
         
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
-            response = session.post(API_URL, headers=headers, json={"inputs": prompt}, timeout=60)
+            # Кодируем текст промпта для безопасной передачи в ссылке
+            encoded_prompt = urllib.parse.quote(prompt)
+            
+            # Генерируем картинку через бесплатный и быстрый Flux от Pollinations.ai
+            # Добавляем параметры для лучшего качества и стиля обложки YouTube
+            image_url = f"https://pollinations.ai{encoded_prompt}?width=1280&height=720&model=flux&enhance=true"
+            
+            response = requests.get(image_url, timeout=40)
             
             if response.status_code == 200:
                 image_bytes = response.content
                 img = Image.open(io.BytesIO(image_bytes))
                 generated_images.append((f"image_{idx + 1}.png", img))
             else:
-                print(f"Ошибка на промпте '{prompt}': {response.text}")
+                print(f"Ошибка на промпте '{prompt}': {response.status_code}")
                 continue
 
         if not generated_images:
             bot.edit_message_text("❌ Не удалось сгенерировать картинки. Попробуй позже.", message.chat.id, status_msg.message_id)
             return
 
-        bot.edit_message_text("📦 Упаковываю все картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
+        bot.edit_message_text("📦 Упаковываю все картинки in ZIP-архив...", message.chat.id, status_msg.message_id)
         zip_buffer = io.BytesIO()
         
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -95,4 +95,5 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
