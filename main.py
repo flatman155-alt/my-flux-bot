@@ -131,7 +131,7 @@ def handle_docs(message):
             bot.edit_message_text("❌ Файл пустой!", message.chat.id, status_msg.message_id)
             return
 
-        # 🛡️ УМНЫЙ ЛИМИТ НА ПАЧКИ (Защита от слива серверов и перегрузки)
+        # 🛡️ УМНЫЙ ЛИМИТ НА ПАЧКИ (Защита от перегрузки серверов)
         MAX_LIMIT = 50
         if len(prompts) > MAX_LIMIT:
             bot.edit_message_text(
@@ -144,7 +144,7 @@ def handle_docs(message):
             return
 
         generated_images = []
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
         
         for idx, prompt in enumerate(prompts):
             bot.edit_message_text(f"🎨 Генерирую премиум HD-картинку {idx + 1} из {len(prompts)}...", message.chat.id, status_msg.message_id)
@@ -153,16 +153,17 @@ def handle_docs(message):
             full_prompt = f"{prompt.strip()}, {style_tags}"
             encoded_text = urllib.parse.quote(full_prompt)
             
-            # 🔥 НОВЫЙ, НЕУБИВАЕМЫЙ И СВЕРХБЫСТРЫЙ ИИ-ДВИЖОК POLLINATIONS AI
-            # Генерирует сочные картинки бесплатно, без ограничений очереди
+            # 🔥 ОБНОВЛЕННЫЙ ПРЯМОЙ И СВЕРХБЫСТРЫЙ ИИ-ДВИЖОК POLLINATIONS AI
             api_link = f"https://pollinations.ai{encoded_text}?width={current['width']}&height={current['height']}&nologo=true&seed={idx + 42}"
             
             try:
-                response = requests.get(api_link, headers=headers, timeout=30)
-                if response.status_code == 200:
+                # Скачиваем саму картинку напрямую, без лишних проверок JSON шлюзов
+                response = requests.get(api_link, headers=headers, timeout=60)
+                if response.content:
                     img_data = response.content
                     img = Image.open(io.BytesIO(img_data))
-                    # Финальный ресайз для идеальной четкости под формат
+                    
+                    # Финальный ресайз для идеальной четкости под формат видео
                     img = img.resize((current['width'], current['height']))
                     generated_images.append((f"image_{idx + 1}.png", img))
             except Exception as e:
@@ -170,7 +171,7 @@ def handle_docs(message):
                 continue
 
         if not generated_images:
-            bot.edit_message_text("❌ Ошибка генерации. ИИ временно недоступен, попробуйте еще раз через пару минут.", message.chat.id, status_msg.message_id)
+            bot.edit_message_text("❌ Все запросы ИИ были отклонены. Пожалуйста, попробуйте еще раз через минуту.", message.chat.id, status_msg.message_id)
             return
 
         bot.edit_message_text("📦 Упаковываю все настроенные картинки в ZIP-архив...", message.chat.id, status_msg.message_id)
@@ -190,7 +191,6 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
-
 
 
 
