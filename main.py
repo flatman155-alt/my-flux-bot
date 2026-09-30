@@ -38,7 +38,7 @@ STYLES = {
     '🛸 Научная фантастика': 'epic sci-fi concept art, space exploration, futuristic technology, intricate details'
 }
 
-print("🤖 Бот запущен через стабильный ИИ-движок...")
+print("🤖 Бот запущен через неубиваемый ИИ-движок...")
 
 def get_main_menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -148,13 +148,12 @@ def handle_docs(message):
             full_prompt = f"{prompt.strip()}, {style_tags}"
             encoded_text = urllib.parse.quote(full_prompt)
             
-            # 🛡️ ПУЛЕНЕПРОБИВАЕМЫЙ РЕЗЕРВНЫЙ АЛЬТЕРНАТИВНЫЙ ИИ-ШЛЮЗ
-            api_link = f"https://pollinations.ai{encoded_text}?width={current['width']}&height={current['height']}&nologo=true&seed={idx + 99}"
+            # 🔥 НОВЫЙ ЖЕЛЕЗНЫЙ АЛЬТЕРНАТИВНЫЙ ИИ-ДВИЖОК ДЛЯ ВЫСОКИХ НАГРУЗОК
+            api_link = f"https://noapi.id{encoded_text}&width={current['width']}&height={current['height']}"
             
             try:
-                # Отправляем запрос с фейковым юзер-агентом обычного браузера
-                req = requests.get(api_link, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}, timeout=35)
-                if req.status_code == 200 and len(req.content) > 1000:
+                req = requests.get(api_link, headers={'User-Agent': 'Mozilla/5.0'}, timeout=35)
+                if req.status_code == 200 and len(req.content) > 5000:
                     img = Image.open(io.BytesIO(req.content))
                     img = img.resize((current['width'], current['height']))
                     generated_images.append((f"image_{idx + 1}.png", img))
@@ -182,5 +181,6 @@ def handle_docs(message):
         bot.edit_message_text(f"💥 Произошла ошибка системы: {str(e)}", message.chat.id, status_msg.message_id)
 
 bot.infinity_polling()
+
 
 
